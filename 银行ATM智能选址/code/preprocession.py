@@ -24,11 +24,18 @@ data_part1_ori.drop(['tmp0'], axis=1, inplace=True)
 data_part1_ori.dropna(inplace=True)
 
 def print_unique_col(df):
+    '''
+        Print unique data for data'columns
+    '''
     cols = df.columns
     for col in cols:
         print(f"column:{col}, unique count:{len(df[col].unique())} \n")
 
 def print_imsi_and_phone(df):
+    '''
+        1. Drop duplicates
+        2. Print number data > 1
+    '''
     df = df[['imsi', 'phone']].drop_duplicates()
     for index, data in df.groupby('phone'):
         if len(data) != 1:
@@ -57,15 +64,18 @@ data_part1_ori.npid = data_part1_ori.npid.apply(lambda x: x.replace('#', '').rep
 loc_data = pd.merge(data_part1_ori, data_part1_loc)
 loc_data.isna().sum()
 
-
+'''
 def match_digit(string):
+        #match some string
     try:
         return eval(re.search('[^0](.*)', string).group(0))
     except:
         return 0
+'''
 def convert_time(df):
     '''
-    去除了不是3号的数据
+        1. drop day=3
+        2. timestamp ---> time
     '''
     add_cols = ['hour_s', 'minute_s', 'second_s','hour_e', 'minute_e', 'second_e']
     add_data = []
@@ -78,51 +88,51 @@ def convert_time(df):
             add_data.append([time_local_s.tm_hour, time_local_s.tm_min, time_local_s.tm_sec, \
                              time_local_e.tm_hour, time_local_e.tm_min, time_local_e.tm_sec])         
     return pd.concat([df.loc[index].reset_index(drop=True), pd.DataFrame(columns=add_cols, data=add_data)], axis=1)
-df = loc_data
-part1_data = convert_time(loc_data)
+
 def map_location(df):
     '''
-        laci----map
+        laci---->> map
     '''
     return dict(zip(df.laci.unique(),range(len(df.laci.unique()))))
-def get_part1_data(df):
-    df = part1_data
+
+def get_wait_hour(t1, t2):
+    '''
+        timestamp ---->> hours
+    '''
+    dt1 = datetime.utcfromtimestamp(t1 / 1000)
+    dt2 = datetime.utcfromtimestamp(t2 / 1000)
+    return [(dt2 - dt1).seconds / 3600]
+
+def get_part1_data(data):
+    '''
+        1. Confirming the data'columns what I need
+        2. Group by imsi
+        3. Get the amount of time that different people spend in different location
+    '''
+    part1_data = []
+    df = convert_time(data)
+    cols = ['start_time', 'imsi', 'laci', 'longitude', 'latitude', 'hour_s',
+       'minute_s', 'second_s', 'location', 'end_time', 'hour_e', 'minute_e', 
+       'second_e', 'wait_hour']
     location_map_dict = map_location(df)
     df['location'] = df.laci.apply(lambda x: location_map_dict.get(x))
     for imsi,data in df.groupby('imsi'):
         data.sort_values('timestamp', inplace=True)
+        data.drop(['tmp1','nid','npid', 'timestamp1', 'hour_e', 'minute_e', 'second_e'], axis=1, inplace=True)
         flag = 0
-        save_index = [0]
-        wait_time = []
         for i in range(len(data)-1):
-            if data.laci.iloc[i] != data.laci.iloc[i+1]:
-                save_index.append(i+1)
+            if data.location.iloc[i] != data.location.iloc[i+1]:
+                #part1_data.append(data.iloc[flag].values.tolist() + 
+                                  #data.iloc[i+1][['timestamp', 'hour_s','minute_s', 'second_s']].values.tolist() +
+                                  #get_wait_hour(data.iloc[flag]['timestamp'],data.iloc[i+1]['timestamp']))
                 
+                part1_data.append(data.iloc[flag].values.tolist() + 
+                                  data.iloc[i+1][['timestamp', 'hour_s','minute_s', 'second_s']].values.tolist() +
+                                  get_wait_hour(data.iloc[flag]['timestamp'],data.iloc[i+1]['timestamp']))
                 flag = i
-   
-    (datetime.utcfromtimestamp(data.timestamp.values[1]/1000) - datetime.utcfromtimestamp(data.timestamp.values[0]/1000)).seconds/3600
-    
+        part1_data.append(data.iloc[flag].values.tolist() + 
+                          data.iloc[-1][['timestamp', 'hour_s','minute_s', 'second_s']].values.tolist() +
+                          get_wait_hour(data.iloc[flag]['timestamp'], data.iloc[-1]['timestamp']))
+    return pd.DataFrame(columns=cols, data=part1_data)
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-
-data.to_csv('./data/part1/data_sample.csv')
+part1_data = get_part1_data(loc_data)
