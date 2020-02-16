@@ -136,3 +136,46 @@ def get_part1_data(data):
     return pd.DataFrame(columns=cols, data=part1_data)
 
 part1_data = get_part1_data(loc_data)
+
+
+
+def get_distance(p1, p2):
+    '''
+    
+    '''
+    print(f"两点相差{int(geodesic(p1,p2).m)}米!\n")
+    return int(geodesic(p1,p2).m)
+
+#p1 = (39.910925,116.413384)
+#p2 = (39.915526,116.403847)
+#get_distance(p1, p2)
+
+def get_distance_point(lat, lon, distance, direction):
+    """
+    根据经纬度，距离，方向获得一个地点
+    :param lat: 纬度
+    :param lon: 经度
+    :param distance: 距离（千米）
+    :param direction: 方向（北：0，东：90，南：180，西：360）
+    :return:
+    """
+    start = geopy.Point(lat, lon)
+    d = geopy.distance.distance(kilometers=distance)
+    end = d.destination(point=start, bearing=direction)
+    lat = end.latitude
+    lon = end.longitude
+    return lat, lon
+
+#lat, lon = get_distance_point(39.910925,116.413384, 0.5, 180)
+#print(f'{lon},{lat}')
+
+def get_city_grid():
+    '''
+        1. 城市经纬度范围（轮廓？）
+        2. 以城市原点划分网格
+        3. 获得每个网格左上右下的点
+        4. 根据轮廓经纬排除不符合的
+        5. girds [[center, xmin, ymin, xmax, ymax],]
+    '''
+    grids = '轮廓经纬咋个获得？,或者判断点是否在城市区域'
+    return grids
