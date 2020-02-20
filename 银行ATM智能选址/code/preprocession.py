@@ -193,21 +193,64 @@ def get_grid_point(center, ori_dis=0.5):
     latmax, lonmax = get_distance_point(center, dis, 135)
     return[latmin, lonmin, latmax, lonmax]
 
-def get_city_grid(city_center, ori_dis=0.5, key):
+def get_city_grids(other_point, key, count=50, ori_dis=0.5):
     '''
         1. 城市经纬度范围（轮廓？）
         2. 以城市原点划分网格
         3. 获得每个网格左上右下的点
         4. 根据轮廓经纬排除不符合的
-        5. girds [[center_x, center_y, xmin, ymin, xmax, ymax],]
+        5. girds [[center_x, center_y, xmin, ymin, xmax, ymax],.....]
     '''
+#city_center为该城市中的经纬度
+#    grids = []
+#    for i in range(1, count+1):
+#        print(f"正在探索第{i}条十字网格,总计有{count}条需探索.")
+#        for j in range(0, 360, 90):
+#            center = get_distance_point(city_center, i*ori_dis*2, j)
+#            #print(center)
+#            if is_point_in_city(center, key):
+#                grids.append(center + get_grid_point(center, ori_dis))
+#            center =  get_distance_point(city_center, (i*ori_dis*2)*2**0.5, j+45)
+#            if is_point_in_city(center, key):
+#                grids.append(center + get_grid_point(center, ori_dis))
+#    print(f"有效的城市网格有{len(grids)}个.")
+ 
+#other_point为该城市之外左上角的经纬度
     grids = []
-    for i in range(50):
-        for j in range(0, 360, 90):
-            center = get_distance_point(city_center, i*ori_dis*2, j)
-            if is_point_in_city(center, key):
-                grids.append(center + get_grid_point(center, ori_dis))
+    for i in range(count+1):
+        x_center = get_distance_point(other_point, i*ori_dis*2, 90)
+        if is_point_in_city(x_center, key):
+            grids.append(x_center + get_grid_point(x_center, ori_dis))
+        for j in range(1, count+1):
+            print(f'正在探测城市网格坐标(x:{i},y:{j}),待(x:{count},y:{count})时结束探测...')
+            y_center = get_distance_point(x_center, j*ori_dis*2, 180)
+            if is_point_in_city(y_center, key):
+                grids.append(y_center + get_grid_point(y_center, ori_dis))
+    pd.DataFrame(data=grids, 
+                 columns=['center_x','center_y',
+                          'latmin','lonmin',
+                          'latmax','lonmax']
+                 ).to_csv('./data/part1/grids.csv', index=False)
+    print(f"有效的城市网格有{len(grids)}个.")
     return grids
+
+
+def plot_city_grids(grids, city='北京'):
+    
+    data_pair = []
+    city_map = Geo().add_schema(maptype=city)
+    for i in range(len(grids)):
+        city_map.add_coordinate(f'city grid{i+1}',grids[i][1],grids[i][0])
+        data_pair.append((f'city grid{i+1}',1))
+    # 画图
+    city_map.add('',data_pair, type_=GeoType.EFFECT_SCATTER, symbol_size=2)
+    city_map.set_series_opts(label_opts=options.LabelOpts(is_show=False))
+    city_map.set_global_opts(title_opts=options.TitleOpts(title=f"{city}城市网格图"))
+
+    webbrowser.open_new_tab(city_map.render())
+
+    
+plot_city_grids(grids)
 
 
 
