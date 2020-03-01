@@ -235,8 +235,10 @@ def get_city_grids(other_point, key, count=50, ori_dis=0.5):
     return grids
 
 
-def plot_city_grids(grids, city='北京'):
-    
+def plot_city_grids(girds,city='北京'):
+    '''
+        根据切割出来的城市网格，绘画出来。
+    '''
     data_pair = []
     city_map = Geo().add_schema(maptype=city)
     for i in range(len(grids)):
@@ -249,8 +251,53 @@ def plot_city_grids(grids, city='北京'):
 
     webbrowser.open_new_tab(city_map.render())
 
+
+def get_poi_data():
     
-plot_city_grids(grids)
+    '''
+    得到poi数据
+    '''
+    display_x = []
+    display_y = []
+    name = []
+    poi_file = ['./data/part2/' + file for file in os.listdir('./data/\
+                part2') if 'xlsx' in file]
+    for file in poi_file:
+        temp = pd.read_excel(file)
+        try:
+            display_x += list(temp.display_x)
+            display_y += list(temp.display_y)
+            name += [file.split("_")[-1].split(".")[0] for i in temp.display_x]
+        except:
+            print(f"文件名'{file}'中，没有包含经纬度信息.")
+    lat_and_lon = [str(display_y[i]) + ',' + str(display_x[i]) for i in range(len(display_x))]
+    poi_data = pd.DataFrame({'poi_name':name,'lat_and_lon':lat_and_lon})
+    poi_data.to_csv('./data/part2/poi_data.csv', index=False)
+    return dict(zip(lat_and_lon, name))
+
+def grids_data(grids, poi_data):
+    
+    '''
+    在城市网格中统计各类poi个数
+    '''
+    for index in range(len(grids)):
+        #for index in range(2):
+            point_poi_count = dict(zip(set(poi_data.values()),[0 for i in set(poi_data.values())]))
+            j = 1
+            for location in poi_data.keys():
+                try:
+                    lat = eval(location.split(',')[0])
+                    lon = eval(location.split(',')[1])
+                    temp_sort = grids[index]
+                    if lat >= temp_sort[0] and lat <= temp_sort[2] and \
+                        lon >= temp_sort[3] and lon <= temp_sort[5]:
+                            point_poi_count[location] += 1
+                    print(f'正在处理第{index+1}个grid的第{j}个poi数据点计数,总计需完成{len(grids)}的{len(poi_data)}的核对.....')
+                except:
+                    print(f"这个经纬度数据有误{location}")
+                j += 1 
+            grids[index] = grids[index] + list(point_poi_count.values())
+    return grids
 
 
 
